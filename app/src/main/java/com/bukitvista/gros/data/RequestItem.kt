@@ -12,6 +12,7 @@ data class Checklist(
 
 data class RequestItem(
     val timestamp: String,
+//    val guestId: String,
     val guestName: String,
     val description: String,
     val actions: String? = null,
