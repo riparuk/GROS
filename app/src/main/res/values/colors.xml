@@ -13,7 +13,12 @@
     <color name="gray800">#30333C</color>
     <color name="grayBold">#505761</color>
 
+    <color name="green700">#45BF55</color>
+    <color name="green900">#133718</color>
+
     <color name="yellow700">#FFAA00</color>
 
     <color name="red700">#EB5656</color>
+
+    <color name="black50">#C2C2C2</color>
 </resources>
