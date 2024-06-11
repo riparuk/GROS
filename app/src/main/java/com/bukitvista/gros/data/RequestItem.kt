@@ -1,12 +1,13 @@
 package com.bukitvista.gros.data
 
 data class RequestItem(
+    val id: String,
     val timestamp: String,
     val guestId: String,
     val guestName: String,
     val description: String,
     val actions: String? = null,
-    val priority: String,
+    val priority: Double,
     val staffId: String? = null,
     val staffName: String? = null,
     val staffImageURL: String? = null,

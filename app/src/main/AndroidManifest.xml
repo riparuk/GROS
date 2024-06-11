@@ -13,6 +13,9 @@
         android:theme="@style/Theme.GROS"
         tools:targetApi="31">
         <activity
+            android:name=".ui.ProfileActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.DetailRequestActivity"
             android:exported="false" />
         <activity

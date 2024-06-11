@@ -29,14 +29,17 @@ class RequestListAdapter(private val listener: OnItemClickListener)
             binding.tvDescription.text = item.description
             binding.tvProgress.text = item.progress
 
-            if (item.priority == "Important") {
-                binding.tvPriority.background = (binding.tvPriority.context.getDrawable(R.drawable.rounded_tag_yellow700))
-            } else if (item.priority == "Urgent") {
+            if (item.priority == 4.0) {
                 binding.tvPriority.background = (binding.tvPriority.context.getDrawable(R.drawable.rounded_tag_red700))
-            } else if (item.priority == "Normal") {
+            } else if (item.priority == 3.0) {
+                binding.tvPriority.background = (binding.tvPriority.context.getDrawable(R.drawable.rounded_tag_yellow700))
+            } else if (item.priority == 2.0) {
                 binding.tvPriority.background = (binding.tvPriority.context.getDrawable(R.drawable.rounded_tag_blue500))
+            } else if (item.priority == 1.0) {
+                binding.tvPriority.background =
+                    (binding.tvPriority.context.getDrawable(R.drawable.rounded_tag_blue100))
             }
-            binding.tvPriority.text = item.priority
+                binding.tvPriority.text = item.priority.toString()
         }
     }
 
