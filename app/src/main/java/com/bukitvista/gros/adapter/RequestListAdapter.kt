@@ -4,32 +4,48 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bukitvista.gros.R
 import com.bukitvista.gros.data.RequestItem
+import com.bukitvista.gros.databinding.ItemRequestBinding
 
-class RequestListAdapter(private val dataSet: List<RequestItem>) :
-    RecyclerView.Adapter<RequestListAdapter.ViewHolder>() {
+class RequestListAdapter(private val listener: OnItemClickListener)
+    :  ListAdapter<RequestItem, RequestListAdapter.ViewHolder>(DIFF_CALLBACK) {
+
+        interface OnItemClickListener {
+            fun onItemClick(item: RequestItem)
+        }
 
     /**
      * Provide a reference to the type of views that you are using
      * (custom ViewHolder)
      */
-    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val tvTimestamp: TextView = view.findViewById(R.id.tvTimestamp)
-        val tvGuestName: TextView = view.findViewById(R.id.tvGuestName)
-        val tvDescription: TextView = view.findViewById(R.id.textView)
-        val tvPriority: TextView = view.findViewById(R.id.tvPriority)
-        val tvProgress: TextView = view.findViewById(R.id.ivDone)
+    class ViewHolder(private val binding: ItemRequestBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(item: RequestItem) {
+            binding.tvTimestamp.text = item.timestamp
+            binding.tvGuestName.text = item.guestName
+            binding.tvDescription.text = item.description
+            binding.tvProgress.text = item.progress
+
+            if (item.priority == "Important") {
+                binding.tvPriority.background = (binding.tvPriority.context.getDrawable(R.drawable.rounded_tag_yellow700))
+            } else if (item.priority == "Urgent") {
+                binding.tvPriority.background = (binding.tvPriority.context.getDrawable(R.drawable.rounded_tag_red700))
+            } else if (item.priority == "Normal") {
+                binding.tvPriority.background = (binding.tvPriority.context.getDrawable(R.drawable.rounded_tag_blue500))
+            }
+            binding.tvPriority.text = item.priority
+        }
     }
 
     // Create new views (invoked by the layout manager)
     override fun onCreateViewHolder(viewGroup: ViewGroup, viewType: Int): ViewHolder {
         // Create a new view, which defines the UI of the list item
-        val view = LayoutInflater.from(viewGroup.context)
-            .inflate(R.layout.item_request, viewGroup, false)
+        val binding = ItemRequestBinding.inflate(LayoutInflater.from(viewGroup.context), viewGroup, false)
 
-        return ViewHolder(view)
+        return ViewHolder(binding)
     }
 
     // Replace the contents of a view (invoked by the layout manager)
@@ -37,24 +53,25 @@ class RequestListAdapter(private val dataSet: List<RequestItem>) :
 
         // Get element from your dataset at this position and replace the
         // contents of the view with that element
-        val item = dataSet[position]
-        viewHolder.tvTimestamp.text = item.timestamp
-        viewHolder.tvGuestName.text = item.guestName
-        viewHolder.tvDescription.text = item.description
-        viewHolder.tvProgress.text = item.progress
-
-        if (item.priority == "Important") {
-            viewHolder.tvPriority.background = (viewHolder.tvPriority.context.getDrawable(R.drawable.rounded_tag_yellow700))
-        } else if (item.priority == "Urgent") {
-            viewHolder.tvPriority.background = (viewHolder.tvPriority.context.getDrawable(R.drawable.rounded_tag_red700))
-        } else if (item.priority == "Normal") {
-            viewHolder.tvPriority.background = (viewHolder.tvPriority.context.getDrawable(R.drawable.rounded_tag_blue500))
+        val item = getItem(position)
+        viewHolder.bind(item)
+        viewHolder.itemView.setOnClickListener {
+            listener.onItemClick(item)
         }
-        viewHolder.tvPriority.text = item.priority
 
 
     }
 
-    // Return the size of your dataset (invoked by the layout manager)
-    override fun getItemCount() = dataSet.size
+    companion object {
+        val DIFF_CALLBACK = object : DiffUtil.ItemCallback<RequestItem>() {
+            override fun areItemsTheSame(oldItem: RequestItem, newItem: RequestItem): Boolean {
+                return oldItem == newItem
+            }
+
+            override fun areContentsTheSame(oldItem: RequestItem, newItem: RequestItem): Boolean {
+                return oldItem == newItem
+            }
+        }
+    }
+
 }

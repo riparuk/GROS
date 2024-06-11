@@ -82,7 +82,6 @@
         app:layout_constraintTop_toBottomOf="@id/appBarLayout">
 
         <LinearLayout
-            android:id="@+id/startDate"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_margin="24dp"
@@ -99,6 +98,7 @@
                 android:textSize="12sp" />
 
             <TextView
+                android:id="@+id/tvStartDate"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:fontFamily="@font/roboto_bold"
@@ -108,7 +108,6 @@
 
 
         <LinearLayout
-            android:id="@+id/endDate"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_margin="24dp"
@@ -126,6 +125,7 @@
                 android:textSize="12sp" />
 
             <TextView
+                android:id="@+id/tvEndDate"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:fontFamily="@font/roboto_bold"
@@ -135,7 +135,7 @@
         </LinearLayout>
 
         <ImageView
-            android:id="@+id/imageView"
+            android:id="@+id/btSelectDate"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -164,6 +164,7 @@
             android:padding="8dp">
 
             <TextView
+                android:id="@+id/tvMyTasks"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="8dp"
@@ -174,6 +175,7 @@
                 android:textSize="16sp" />
 
             <TextView
+                android:id="@+id/tvAll"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="8dp"
@@ -184,6 +186,7 @@
                 android:textSize="16sp" />
 
             <TextView
+                android:id="@+id/tvUrgent"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="8dp"
@@ -194,6 +197,7 @@
                 android:textSize="16sp" />
 
             <TextView
+                android:id="@+id/tvImportant"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="8dp"
@@ -204,6 +208,7 @@
                 android:textSize="16sp" />
 
             <TextView
+                android:id="@+id/tvNormal"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="8dp"
