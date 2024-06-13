@@ -12,6 +12,7 @@ import com.bukitvista.gros.data.RequestItem
 import com.bukitvista.gros.databinding.ItemRequestBinding
 import com.bukitvista.gros.response.RequestsResponse
 import com.bukitvista.gros.response.RequestsResponseItem
+import com.bumptech.glide.Glide
 
 class RequestListAdapter(private val listener: OnItemClickListener)
     :  ListAdapter<RequestsResponseItem, RequestListAdapter.ViewHolder>(DIFF_CALLBACK) {
@@ -29,6 +30,11 @@ class RequestListAdapter(private val listener: OnItemClickListener)
             binding.tvTimestamp.text = item.createdAt
             binding.tvGuestName.text = item.guestName
             binding.tvDescription.text = item.description
+
+            // Load staff profile image
+            Glide.with(itemView.context)
+                .load(item.staffImageURL)
+                .into(binding.ivStaffProfile)
 
             // Count progress done
             val progressCount = listOf(
