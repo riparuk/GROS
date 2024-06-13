@@ -1,25 +1,37 @@
 package com.bukitvista.gros.ui
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
 import androidx.core.util.Pair
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.children
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.bukitvista.gros.R
 import com.bukitvista.gros.adapter.RequestListAdapter
-import com.bukitvista.gros.data.Priority
+import com.bukitvista.gros.data.ImageItem
 import com.bukitvista.gros.data.RequestItem
 import com.bukitvista.gros.databinding.ActivityOnSiteRequestsBinding
+import com.bukitvista.gros.response.RequestsResponseItem
+import com.bukitvista.gros.retrofit.ApiConfig
+import com.bukitvista.gros.sharedpreferences.SharedPreferencesManager
+import com.bukitvista.gros.viewmodel.FilterViewModel
+import com.bukitvista.gros.viewmodel.RequestListViewModel
 import com.google.android.material.datepicker.MaterialDatePicker
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -27,8 +39,15 @@ import java.util.Locale
 
 class OnSiteRequestsActivity : AppCompatActivity(), RequestListAdapter.OnItemClickListener {
     lateinit var binding: ActivityOnSiteRequestsBinding
-
+    lateinit var viewModel: RequestListViewModel
+    lateinit var filterViewModel: FilterViewModel
     private lateinit var adapter: RequestListAdapter
+
+    companion object {
+        private const val TAG = "OnSiteRequestActivity"
+        var STAFF_ID: String? = null.toString()
+        var PROPERTY_ID: String = null.toString()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,6 +60,19 @@ class OnSiteRequestsActivity : AppCompatActivity(), RequestListAdapter.OnItemCli
             insets
         }
 
+        STAFF_ID = SharedPreferencesManager.getStaffId(this)
+        PROPERTY_ID = SharedPreferencesManager.getPropertyId(this)
+
+        // Jika belum login
+        if (STAFF_ID == null) {
+            // Lakukan sesuatu dengan storedStaffId
+            startActivity(Intent(this, MainActivity::class.java))
+            finish()
+        }
+
+        viewModel = ViewModelProvider(this)[RequestListViewModel::class.java]
+        filterViewModel = ViewModelProvider(this)[FilterViewModel::class.java]
+
         // assigning ID of the toolbar to a variable
         val toolbar = binding.toolbar
 
@@ -49,16 +81,70 @@ class OnSiteRequestsActivity : AppCompatActivity(), RequestListAdapter.OnItemCli
         binding.rvRequests.layoutManager = LinearLayoutManager(this)
         binding.rvRequests.addItemDecoration(DividerItemDecoration(this, (binding.rvRequests.layoutManager as LinearLayoutManager).getOrientation())) // Adjust color and height as needed
 
-        // set request data list
-        setRequestList(generateDummyData())
+        binding.rvRequests.adapter = adapter
 
-        // using toolbar as ActionBar
+        viewModel.requestList.observe(this, Observer { items ->
+            setRequestList(items)
+        })
+
+        filterViewModel.filters.observe(this, Observer { filters ->
+            fetchRequests()
+        })
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayShowTitleEnabled(false)
 
         initToolbarButtons()
-        initControlDateButton()
+        initControlDateSetup()
         initCategoryTextViews()
+    }
+
+    fun fetchRequests() {
+        showLoading(true)
+        // Convert date to query support date format
+        val startDateFormatForQuery = SimpleDateFormat("yyyy-MM-dd'T00:00:00'", Locale.getDefault())
+        val endDateFormatForQuery = SimpleDateFormat("yyyy-MM-dd'T23:59:00'", Locale.getDefault())
+        val startDate = filterViewModel.filters.value?.startDate?.let { startDateFormatForQuery.format(it) }
+        val endDate = filterViewModel.filters.value?.endDate?.let { endDateFormatForQuery.format(it) }
+        val client = ApiConfig.getApiService().getRequests(propertyId = PROPERTY_ID, startDate = startDate, endDate = endDate, priority = filterViewModel.filters.value?.priority, assignTo = filterViewModel.filters.value?.assignTo)
+        client.enqueue(object : Callback<List<RequestsResponseItem>> {
+            override fun onResponse(
+                call: Call<List<RequestsResponseItem>>, response: Response<List<RequestsResponseItem>>
+            ) {
+                showLoading(false)
+                if (response.isSuccessful) {
+                    val responseBody = response.body()
+                    if (responseBody != null) {
+                        viewModel.setItems(responseBody)
+                    }
+                } else {
+                    Log.e(TAG, "onFailure: $response")
+                    Toast.makeText(this@OnSiteRequestsActivity, "Error:${response.code()}-${response.message()}", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onFailure(call: Call<List<RequestsResponseItem>>, t: Throwable) {
+                showLoading(false)
+                Log.e(TAG, "onFailure: ${t.message}")
+
+                val errorMessage = if (t is IOException) {
+                    // Jika kesalahan adalah IOException, artinya ada masalah dengan koneksi internet
+                    "Problem with Connection"
+                } else {
+                    // Jika kesalahan bukan IOException, Anda dapat menampilkan pesan kesalahan yang diterima
+                    t.message ?: "Something error"
+                }
+
+                Toast.makeText(this@OnSiteRequestsActivity, errorMessage, Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+
+    private fun showLoading(isLoading: Boolean) {
+        if (isLoading) {
+            binding.progressBar.visibility = View.VISIBLE
+        } else {
+            binding.progressBar.visibility = View.GONE
+        }
     }
 
     private fun initToolbarButtons(){
@@ -69,13 +155,25 @@ class OnSiteRequestsActivity : AppCompatActivity(), RequestListAdapter.OnItemCli
 
         binding.ivProfile.setOnClickListener {
             Toast.makeText(this, "Profile button clicked", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, ProfileActivity::class.java))
         }
     }
 
-    private fun initControlDateButton() {
-        var startDate = Date(MaterialDatePicker.thisMonthInUtcMilliseconds())
-        var endDate = Date(MaterialDatePicker.todayInUtcMilliseconds())
-        MaterialDatePicker.todayInUtcMilliseconds()
+    private fun initControlDateSetup() {
+        // Format tanggal
+        val dateFormat = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault())
+
+        val start = Date(MaterialDatePicker.thisMonthInUtcMilliseconds())
+        val end = Date(MaterialDatePicker.todayInUtcMilliseconds())
+        filterViewModel.updateRangeDate(start, end)
+
+        // Dapatkan tanggal dalam milliseconds dan format menjadi string
+        val startDate = filterViewModel.filters.value?.startDate
+        val endDate = filterViewModel.filters.value?.endDate
+
+        // Set text pada TextView
+        binding.tvStartDate.text = startDate?.let { dateFormat.format(it) }
+        binding.tvEndDate.text = endDate?.let { dateFormat.format(it) }
         // control date button
         binding.btSelectDate.setOnClickListener {
             // Handle button click event
@@ -87,13 +185,19 @@ class OnSiteRequestsActivity : AppCompatActivity(), RequestListAdapter.OnItemCli
     private fun initCategoryTextViews() {
         val layoutCategories = binding.layoutCategories
 
-        val textViews = listOf<TextView>(
-            layoutCategories.findViewById(R.id.tvMyTasks),
-            layoutCategories.findViewById(R.id.tvAll),
-            layoutCategories.findViewById(R.id.tvUrgent),
-            layoutCategories.findViewById(R.id.tvImportant),
-            layoutCategories.findViewById(R.id.tvNormal)
+        val textViews = listOf(
+            binding.tvMyTasks,
+            binding.tvAll,
+            binding.tvUrgent,
+            binding.tvImportant,
+            binding.tvNormal,
+            binding.tvLow,
         )
+
+        if (filterViewModel.filters.value?.activeTag != null) {
+            textViews[filterViewModel.filters.value?.activeTag!!].background = getDrawable(R.drawable.rounded_corner_blue)
+            textViews[filterViewModel.filters.value?.activeTag!!].setTextColor(getColor(R.color.white))
+        }
 
         for (textView in textViews) {
             textView.setOnClickListener {
@@ -103,22 +207,38 @@ class OnSiteRequestsActivity : AppCompatActivity(), RequestListAdapter.OnItemCli
                         view.setTextColor(getColor(R.color.blue700))
                     }
                 }
+                // Set background and text color for the clicked TextView
                 textView.background = getDrawable(R.drawable.rounded_corner_blue)
                 textView.setTextColor(getColor(R.color.white))
                 val category = textView.text.toString()
+                if(category == "My Tasks"){
+                    filterViewModel.update(priority = null, assignTo = STAFF_ID, activeTag = 0)
+                } else if (category == "All"){
+                    filterViewModel.update(priority = null, assignTo = null, activeTag = 1)
+                } else if(category == "Urgent"){
+                    filterViewModel.update(priority = 4, assignTo = null, activeTag = 2)
+                } else if(category == "Important"){
+                    filterViewModel.update(priority = 3, assignTo = null, activeTag = 3)
+                } else if(category == "Normal"){
+                    filterViewModel.update(priority = 2, assignTo = null, activeTag = 4)
+                } else if(category == "Low"){
+                    filterViewModel.update(priority = 1, assignTo = null, activeTag = 5)
+                }
                 Toast.makeText(this, "$category clicked", Toast.LENGTH_SHORT).show()
-                // Perform any other actions or modifications
             }
         }
     }
 
-    override fun onItemClick(item: RequestItem) {
+    override fun onItemClick(item: RequestsResponseItem) {
         Toast.makeText(this, "Item : ${item.guestName} clicked", Toast.LENGTH_SHORT).show()
+
+        val intent = Intent(this, DetailRequestActivity::class.java)
+        intent.putExtra("REQUEST_ITEM", item)
+        startActivity(intent)
     }
 
-    private fun setRequestList(items: List<RequestItem>) {
-        adapter.submitList(items)
-        binding.rvRequests.adapter = adapter
+    private fun setRequestList(requests: List<RequestsResponseItem>) {
+        adapter.submitList(requests)
     }
 
     private fun showCalendar() {
@@ -133,104 +253,14 @@ class OnSiteRequestsActivity : AppCompatActivity(), RequestListAdapter.OnItemCli
             .build()
 
         datePicker.addOnPositiveButtonClickListener { dateRange ->
-            val format = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-            binding.tvStartDate.text = format.format(dateRange.first)
-            binding.tvEndDate.text = format.format(dateRange.second)
+            val simple = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+            binding.tvStartDate.text = simple.format(dateRange.first)
+            binding.tvEndDate.text = simple.format(dateRange.second)
+            filterViewModel.update(startDate = Date(dateRange.first), endDate = Date(dateRange.second))
             // implement re-run fetch api for selected dates here
         }
 
         datePicker.show(supportFragmentManager, "DateRangePicker")
     }
-
-    fun String.toDate(): Date? {
-        val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        return format.parse(this)
-    }
-
-    fun generateDummyData(): List<RequestItem> {
-        return listOf(
-            RequestItem(
-                timestamp = "2024-05-20 05:01:58",
-                guestId = "HMKSAZCEHK",
-                guestName = "Libby",
-                description = "Libby is waiting for assistance at the property front office to store her bags and wants to know if someone is on their way to help.",
-                priority = Priority.HIGH,
-                progress = "1/3 Done"
-            ),
-            RequestItem(
-                timestamp = "2024-05-20 04:31:47",
-                guestId = "HMKSAZCEHK",
-                guestName = "Libby",
-                description = "Libby is asking for information about where to store her bags and whether the reception desk is the same as the front office.",
-                priority = Priority.HIGH,
-                progress = "2/3 Done"
-            ),
-            RequestItem(
-                timestamp = "2024-05-21 06:03:56",
-                guestId = "HMEMRAR2XJ",
-                guestName = "Nadya",
-                description = "The guest is inquiring about the availability of house cleaning service and requesting new towels in the property.",
-                priority = Priority.HIGH,
-                progress = "Completed"
-            ),
-            RequestItem(
-                timestamp = "2024-05-21 06:33:21",
-                guestId = "HMSMXNFMRP",
-                guestName = "Ollie",
-                description = "Ollie reported an issue with the drainage in the shower tray. The water level rises and drains slowly, posing a risk of flooding in the bathroom.",
-                priority = Priority.HIGH,
-                progress = "1/3 Done"
-            ),
-            RequestItem(
-                timestamp = "2024-05-15 19:26:19",
-                guestId = "4617255719",
-                guestName = "Ricardo",
-                description = "Ricardo mentioned a request for a van pick-up and motorbike rentals. He might need assistance in confirming the availability and arranging these services.",
-                priority = Priority.MEDIUM,
-                progress = "2/3 Done"
-            ),
-            RequestItem(
-                timestamp = "2024-05-07 02:52:17",
-                guestId = "HMER4XA3PF",
-                guestName = "Evan",
-                description = "User offers to provide any additional information required for the pick-up arrangements, showing willingness to cooperate.",
-                priority = Priority.MEDIUM,
-                progress = "Completed"
-            ),
-            RequestItem(
-                timestamp = "2024-05-19 07:05:34",
-                guestId = "HMEREZT9ZH",
-                guestName = "Beth",
-                description = "Beth reported that a fuse has tripped in one of the rooms at the villa and requested assistance in locating the fuse box and resetting it.",
-                priority = Priority.HIGH,
-                progress = "2/3 Done"
-            ),
-            RequestItem(
-                timestamp = "2024-05-19 12:42:42",
-                guestId = "HM333NCXWN",
-                guestName = "Mischa",
-                description = "Mischa arrived at the villa but encountered an issue with the air conditioning in one of the rooms. The staff mentioned it can only be fixed tomorrow, to which Mischa expressed the necessity to have it fixed for the night.",
-                priority = Priority.HIGH,
-                progress = "1/3 Done"
-            ),
-            RequestItem(
-                timestamp = "2024-04-28 02:41:37",
-                guestId = "HMBQS2CB5X",
-                guestName = "Georgia",
-                description = "Georgia is requesting to leave the key and bags at the reception without an onsite staff present as they are ready to depart.",
-                priority = Priority.LOW,
-                progress = "Completed"
-            ),
-            RequestItem(
-                timestamp = "2024-05-04 01:57:25",
-                guestId = "HMTRPJSCCT",
-                guestName = "Nadia",
-                description = "Nadia asked if someone will be present to assist with the check-in process at the villa.",
-                priority = Priority.MEDIUM,
-                progress = "Completed"
-            )
-        )
-    }
-
 
 }

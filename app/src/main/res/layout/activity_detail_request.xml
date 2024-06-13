@@ -121,7 +121,7 @@
                     app:layout_constraintStart_toStartOf="parent"/>
 
                 <TextView
-                    android:id="@+id/ivDone"
+                    android:id="@+id/tvProgress"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/rounded_tag_blue700"
@@ -141,14 +141,15 @@
                 android:layout_height="wrap_content"
                 android:background="@drawable/rounded_line_green700"
                 android:fontFamily="@font/roboto_bold"
-                android:text="Grab this!"
                 android:paddingHorizontal="12dp"
                 android:paddingVertical="6dp"
+                android:text="Grab this!"
                 android:textColor="@color/white"
                 android:textSize="12dp"
                 app:layout_constraintBottom_toTopOf="@+id/headerLayout"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/tvSummary" />
+                app:layout_constraintTop_toBottomOf="@+id/tvSummary"
+                tools:ignore="TextSizeCheck" />
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/headerLayout"
@@ -206,7 +207,7 @@
                         android:textSize="12sp" />
 
                     <ImageView
-                        android:id="@+id/ivStaffAllocated"
+                        android:id="@+id/ivStaffProfile"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
@@ -323,19 +324,10 @@
             android:orientation="vertical"
             android:layout_margin="24dp">
             <LinearLayout
+                android:id="@+id/layoutAttachmentsURLs"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
-<!--                Text below should be underlined -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="- ScreenShot_Evidence.png"/>
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="- PickupDone_Evidence.png"/>
-            </LinearLayout>
+                android:orientation="vertical"/>
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btAddAttachments"
                 android:layout_width="wrap_content"

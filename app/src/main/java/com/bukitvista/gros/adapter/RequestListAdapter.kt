@@ -10,12 +10,14 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bukitvista.gros.R
 import com.bukitvista.gros.data.RequestItem
 import com.bukitvista.gros.databinding.ItemRequestBinding
+import com.bukitvista.gros.response.RequestsResponse
+import com.bukitvista.gros.response.RequestsResponseItem
 
 class RequestListAdapter(private val listener: OnItemClickListener)
-    :  ListAdapter<RequestItem, RequestListAdapter.ViewHolder>(DIFF_CALLBACK) {
+    :  ListAdapter<RequestsResponseItem, RequestListAdapter.ViewHolder>(DIFF_CALLBACK) {
 
         interface OnItemClickListener {
-            fun onItemClick(item: RequestItem)
+            fun onItemClick(item: RequestsResponseItem)
         }
 
     /**
@@ -23,23 +25,32 @@ class RequestListAdapter(private val listener: OnItemClickListener)
      * (custom ViewHolder)
      */
     class ViewHolder(private val binding: ItemRequestBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(item: RequestItem) {
-            binding.tvTimestamp.text = item.timestamp
+        fun bind(item: RequestsResponseItem) {
+            binding.tvTimestamp.text = item.createdAt
             binding.tvGuestName.text = item.guestName
             binding.tvDescription.text = item.description
-            binding.tvProgress.text = item.progress
 
-            if (item.priority == 4.0) {
+            // Count progress done
+            val progressCount = listOf(
+                item.receiveVerifyCompleted,
+                item.coordinateActionCompleted,
+                item.followUpResolveCompleted
+            )
+            val progressDone = progressCount.count { it == true }
+            val progressTotal = progressCount.size
+            val progress = "$progressDone/$progressTotal"
+            binding.tvProgress.text = progress
+
+            if (item.priority == 4) {
                 binding.tvPriority.background = (binding.tvPriority.context.getDrawable(R.drawable.rounded_tag_red700))
-            } else if (item.priority == 3.0) {
+            } else if (item.priority == 3) {
                 binding.tvPriority.background = (binding.tvPriority.context.getDrawable(R.drawable.rounded_tag_yellow700))
-            } else if (item.priority == 2.0) {
+            } else if (item.priority == 2) {
                 binding.tvPriority.background = (binding.tvPriority.context.getDrawable(R.drawable.rounded_tag_blue500))
-            } else if (item.priority == 1.0) {
-                binding.tvPriority.background =
-                    (binding.tvPriority.context.getDrawable(R.drawable.rounded_tag_blue100))
+            } else if (item.priority == 1) {
+                binding.tvPriority.background = (binding.tvPriority.context.getDrawable(R.drawable.rounded_tag_gray700))
             }
-                binding.tvPriority.text = item.priority.toString()
+            binding.tvPriority.text = item.priority.toString()
         }
     }
 
@@ -62,16 +73,15 @@ class RequestListAdapter(private val listener: OnItemClickListener)
             listener.onItemClick(item)
         }
 
-
     }
 
     companion object {
-        val DIFF_CALLBACK = object : DiffUtil.ItemCallback<RequestItem>() {
-            override fun areItemsTheSame(oldItem: RequestItem, newItem: RequestItem): Boolean {
+        val DIFF_CALLBACK = object : DiffUtil.ItemCallback<RequestsResponseItem>() {
+            override fun areItemsTheSame(oldItem: RequestsResponseItem, newItem: RequestsResponseItem): Boolean {
                 return oldItem == newItem
             }
 
-            override fun areContentsTheSame(oldItem: RequestItem, newItem: RequestItem): Boolean {
+            override fun areContentsTheSame(oldItem: RequestsResponseItem, newItem: RequestsResponseItem): Boolean {
                 return oldItem == newItem
             }
         }

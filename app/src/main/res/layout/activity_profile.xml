@@ -103,18 +103,21 @@
                 android:orientation="vertical">
 
                 <TextView
+                    android:id="@+id/tvName"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/roboto_bold"
                     android:textSize="24sp"
-                    android:text="Juanda" />
+                    android:text="NAME" />
                 <TextView
+                    android:id="@+id/tvStaffId"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textSize="16sp"
                     android:textColor="@color/gray700"
                     android:text="STAFF_ID"/>
                 <TextView
+                    android:id="@+id/tvPropertyId"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/manrope_bold"
@@ -156,15 +159,30 @@
                 android:textSize="16dp"
                 android:text="Request Handled"/>
             <TextView
+                android:id="@+id/tvRequestHandled"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textAlignment="textEnd"
                 android:fontFamily="@font/roboto_medium"
                 android:textColor="@color/gray500"
                 android:textSize="16dp"
-                android:text="6"/>
+                android:text="99"/>
 
         </LinearLayout>
+        <Button
+            android:id="@+id/btLogout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="20dp"
+            android:backgroundTint="@color/gray500"
+            android:text="Logout"/>
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            style="?android:attr/progressBarStyle"
+            android:visibility="gone"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

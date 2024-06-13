@@ -1,5 +1,9 @@
 package com.bukitvista.gros.data
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+
+@Parcelize
 data class RequestItem(
     val id: String,
     val timestamp: String,
@@ -11,10 +15,16 @@ data class RequestItem(
     val staffId: String? = null,
     val staffName: String? = null,
     val staffImageURL: String? = null,
-    val imageURLs: List<String>? = null,
+    val imageFiles: List<ImageItem>? = null,
     val notes: String? = null,
     val progress: String,
-    val receiveVerifyCompleted: Boolean = false,
-    val coordinateActionCompleted: Boolean = false,
-    val followUpResolveCompleted: Boolean = false,
-)
+    var receiveVerifyCompleted: Boolean,
+    var coordinateActionCompleted: Boolean,
+    var followUpResolveCompleted: Boolean,
+): Parcelable
+
+@Parcelize
+data class ImageItem(
+    val name: String,
+    val url: String
+): Parcelable

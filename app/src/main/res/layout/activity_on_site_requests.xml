@@ -179,10 +179,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="8dp"
-                android:background="@drawable/rounded_corner_blue"
+                android:background="@drawable/rounded_corner_white"
                 android:padding="8dp"
                 android:text="All"
-                android:textColor="@color/white"
+                android:textColor="@color/blue700"
                 android:textSize="16sp" />
 
             <TextView
@@ -218,6 +218,17 @@
                 android:textColor="@color/blue700"
                 android:textSize="16sp" />
 
+            <TextView
+                android:id="@+id/tvLow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="8dp"
+                android:background="@drawable/rounded_corner_white"
+                android:padding="8dp"
+                android:text="Low"
+                android:textColor="@color/blue700"
+                android:textSize="16sp" />
+
         </LinearLayout>
     </HorizontalScrollView>
 
@@ -231,6 +242,17 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/horizontalScrollView"
         app:layout_constraintVertical_bias="0.0" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@+id/rvRequests"
+        app:layout_constraintEnd_toEndOf="@+id/rvRequests"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/horizontalScrollView" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>
