@@ -136,7 +136,7 @@
             </LinearLayout>
 
             <TextView
-                android:id="@+id/btGrabThis"
+                android:id="@+id/btAssign"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/rounded_line_green700"
@@ -212,6 +212,14 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         app:srcCompat="@drawable/ic_empty_circle" />
+                    <TextView
+                        android:id="@+id/tvStaffName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="@font/roboto"
+                        android:text="Staff Name"
+                        android:textSize="12sp" />
 
                 </LinearLayout>
 

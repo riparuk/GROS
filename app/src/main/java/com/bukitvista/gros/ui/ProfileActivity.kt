@@ -1,7 +1,10 @@
 package com.bukitvista.gros.ui
 
+import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import android.util.Log
 import android.view.View
 import android.widget.Toast
@@ -17,9 +20,14 @@ import com.bukitvista.gros.retrofit.ApiConfig
 import com.bukitvista.gros.sharedpreferences.SharedPreferencesManager
 import com.bukitvista.gros.viewmodel.ProfileViewModel
 import com.bukitvista.gros.viewmodel.RequestListViewModel
+import com.bumptech.glide.Glide
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.io.File
 import java.io.IOException
 
 class ProfileActivity : AppCompatActivity() {
@@ -29,6 +37,7 @@ class ProfileActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "ProfileActivity"
+        private const val PICK_IMAGE_REQUEST = 1
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,6 +65,55 @@ class ProfileActivity : AppCompatActivity() {
             SharedPreferencesManager.clearStaffId(this)
             startActivity(Intent(this, MainActivity::class.java))
             finish()
+        }
+
+        binding.ivProfile.setOnClickListener {
+            openGallery()
+        }
+    }
+
+    private fun openGallery() {
+        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+        startActivityForResult(intent, PICK_IMAGE_REQUEST)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK && data != null && data.data != null) {
+            val selectedImageUri = data.data!!
+            Glide.with(this).load(selectedImageUri).into(binding.ivProfile)
+            uploadImageToServer(selectedImageUri)
+        }
+    }
+
+    private fun uploadImageToServer(imageUri: Uri) {
+        val filePathColumn = arrayOf(MediaStore.Images.Media.DATA)
+        val cursor = contentResolver.query(imageUri, filePathColumn, null, null, null)
+        cursor?.moveToFirst()
+        val columnIndex = cursor?.getColumnIndex(filePathColumn[0])
+        val picturePath = cursor?.getString(columnIndex!!)
+        cursor?.close()
+
+        if (picturePath != null) {
+            val file = File(picturePath)
+            val requestBody = file.asRequestBody("image/*".toMediaTypeOrNull())
+            val body = MultipartBody.Part.createFormData("profile_picture", file.name, requestBody)
+
+            val apiService = ApiConfig.getApiService()
+            val call = apiService.uploadProfilePicture(viewModel.getStaffData().value?.id.toString(), body)
+            call.enqueue(object : Callback<StaffResponse> {
+                override fun onResponse(call: Call<StaffResponse>, response: Response<StaffResponse>) {
+                    if (response.isSuccessful) {
+                        Toast.makeText(this@ProfileActivity, "Profile picture uploaded successfully", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@ProfileActivity, "Upload failed: ${response.message()}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<StaffResponse>, t: Throwable) {
+                    Toast.makeText(this@ProfileActivity, "Upload failed: ${t.message}", Toast.LENGTH_SHORT).show()
+                }
+            })
         }
     }
 
@@ -109,5 +167,14 @@ class ProfileActivity : AppCompatActivity() {
         binding.tvStaffId.text = "STAFF ID : ${responseBody.id.toString()}"
         binding.tvPropertyId.text = "PROPERTY ID : ${responseBody.propertyId.toString()}"
         binding.tvRequestHandled.text = responseBody.requestHandled.toString()
+
+        if (responseBody.photo == null) {
+            binding.ivProfile.setImageResource(R.drawable.ic_add_photo_foreground)
+        } else {
+            Glide.with(this)
+                .load(responseBody.photo.url)
+                .into(binding.ivProfile)
+        }
+
     }
 }
