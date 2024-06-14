@@ -82,5 +82,5 @@ data class RequestsResponseItem(
 	val actions: String? = null,
 
 	@field:SerializedName("assignTo")
-	val assignTo: Int? = null
+	val assignTo: String? = null
 ) : Parcelable

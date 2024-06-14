@@ -14,7 +14,7 @@ data class StaffResponse(
 	val photo: Photo? = null,
 
 	@field:SerializedName("id")
-	val id: Int? = null,
+	val id: String? = null,
 
 	@field:SerializedName("request_handled")
 	val requestHandled: Int? = null,

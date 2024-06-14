@@ -150,11 +150,10 @@ class OnSiteRequestsActivity : AppCompatActivity(), RequestListAdapter.OnItemCli
     private fun initToolbarButtons(){
 
         binding.ivSearch.setOnClickListener {
-            Toast.makeText(this, "Search button clicked", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Search button in Development!", Toast.LENGTH_SHORT).show()
         }
 
         binding.ivProfile.setOnClickListener {
-            Toast.makeText(this, "Profile button clicked", Toast.LENGTH_SHORT).show()
             startActivity(Intent(this, ProfileActivity::class.java))
         }
     }
@@ -178,7 +177,7 @@ class OnSiteRequestsActivity : AppCompatActivity(), RequestListAdapter.OnItemCli
         binding.btSelectDate.setOnClickListener {
             // Handle button click event
             showCalendar()
-            Toast.makeText(this, "Date Control button clicked", Toast.LENGTH_SHORT).show()
+//            Toast.makeText(this, "Date Control button clicked", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -224,7 +223,7 @@ class OnSiteRequestsActivity : AppCompatActivity(), RequestListAdapter.OnItemCli
                 } else if(category == "Low"){
                     filterViewModel.update(priority = 1, assignTo = null, activeTag = 5)
                 }
-                Toast.makeText(this, "$category clicked", Toast.LENGTH_SHORT).show()
+//                Toast.makeText(this, "$category clicked", Toast.LENGTH_SHORT).show()
             }
         }
     }

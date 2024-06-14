@@ -116,13 +116,19 @@ class DetailRequestActivity : AppCompatActivity() {
             intent.getParcelableExtra<RequestsResponseItem>("REQUEST_ITEM")
         }
 
-        viewModel.setItem(requestItem)
+        binding.btAssign.isEnabled = false
+        fetchRequests(requestId = requestItem?.id!!)
 
         binding.ivBack.setOnClickListener {
             finish()
         }
         binding.btAssign.setOnClickListener {
-            assignRequest(requestItem?.id!!, staffId = staffId?.toInt()!!)
+            if (staffId != null) {
+                showConfirmationDialog("Assign Button Clicked", "\"Are you sure want to assign this request? (it cannot be undone!)\"") {
+                    // Action to perform on Yes
+                    assignRequest(requestItem.id, staffId = staffId)
+                }
+            }
         }
         binding.btAddAttachments.setOnClickListener {
             checkAndRequestPermissions()
@@ -133,10 +139,28 @@ class DetailRequestActivity : AppCompatActivity() {
                 binding.btAssign.isEnabled = false
                 binding.btAssign.text = "Assigned"
                 binding.btAssign.setBackgroundColor(ContextCompat.getColor(this, R.color.gray400))
+            } else {
+                binding.btAssign.isEnabled = true
+                binding.btAssign.text = "Assign"
+                binding.btAssign.setBackgroundColor(ContextCompat.getColor(this, R.color.green700))
             }
             setRequestData(it)
         }
 
+    }
+
+    private fun showConfirmationDialog(title: String, message: String, onYesAction: () -> Unit) {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle(title)
+        builder.setMessage(message)
+        builder.setPositiveButton("Yes") { dialog, _ ->
+            onYesAction()
+            dialog.dismiss()
+        }
+        builder.setNegativeButton("No") { dialog, _ ->
+            dialog.dismiss()
+        }
+        builder.show()
     }
 
     private fun pickImages() {
@@ -168,12 +192,14 @@ class DetailRequestActivity : AppCompatActivity() {
 
             val apiService = ApiConfig.getApiService()
             viewModel.getItem().value?.id?.let { apiService.uploadRequestImage(it, body) }
-                ?.enqueue(object : Callback<List<ImageURLsItem?>?> {
+                ?.enqueue(object : Callback<RequestsResponseItem> {
                     override fun onResponse(
-                        call: Call<List<ImageURLsItem?>?>,
-                        response: Response<List<ImageURLsItem?>?>
+                        call: Call<RequestsResponseItem>,
+                        response: Response<RequestsResponseItem>
                     ) {
                         if (response.isSuccessful) {
+                            val updatedRequest = response.body()
+                            viewModel.setItem(updatedRequest)
                             Toast.makeText(
                                 this@DetailRequestActivity,
                                 "Profile picture uploaded successfully",
@@ -189,7 +215,7 @@ class DetailRequestActivity : AppCompatActivity() {
                         }
                     }
 
-                    override fun onFailure(call: Call<List<ImageURLsItem?>?>, t: Throwable) {
+                    override fun onFailure(call: Call<RequestsResponseItem>, t: Throwable) {
                         Toast.makeText(
                             this@DetailRequestActivity,
                             "Upload failed: ${t.message}",
@@ -200,9 +226,9 @@ class DetailRequestActivity : AppCompatActivity() {
         }
     }
 
-    fun fetchRequests() {
+    fun fetchRequests(requestId: Int) {
         showLoading(true)
-        val client = ApiConfig.getApiService().getRequests(requestId = viewModel.getItem().value?.id)
+        val client = ApiConfig.getApiService().getRequests(requestId = requestId)
         client.enqueue(object : Callback<List<RequestsResponseItem>> {
             override fun onResponse(
                 call: Call<List<RequestsResponseItem>>, response: Response<List<RequestsResponseItem>>
@@ -237,11 +263,11 @@ class DetailRequestActivity : AppCompatActivity() {
     }
 
     private fun showLoading(isLoading: Boolean) {
-//        if (isLoading) {
-//            binding.progressBar.visibility = View.VISIBLE
-//        } else {
-//            binding.progressBar.visibility = View.GONE
-//        }
+        if (isLoading) {
+            binding.progressBar.visibility = View.VISIBLE
+        } else {
+            binding.progressBar.visibility = View.GONE
+        }
     }
 
     fun updateRequestStep(requestId: Int, step: Int) {
@@ -271,7 +297,7 @@ class DetailRequestActivity : AppCompatActivity() {
     }
 
 
-    private fun assignRequest(requestId: Int, staffId: Int) {
+    private fun assignRequest(requestId: Int, staffId: String) {
         val apiService = ApiConfig.getApiService()
         val call = apiService.assignRequest(requestId, staffId)
 
@@ -370,8 +396,34 @@ class DetailRequestActivity : AppCompatActivity() {
         val radioButtons = listOf<RadioButton>(binding.radioButton1, binding.radioButton2, binding.radioButton3)
         for ((step, radioButton) in radioButtons.withIndex()) {
             radioButton.setOnClickListener {
-                updateRequestStep(requestItem?.id!!, step+1)
+                showConfirmationDialogCustom(
+                    title = "Cheklist Selected",
+                    message = "Are you sure want to mark ${radioButton.text} as Done? (it cannot be undone!)",
+                    onYesAction = {
+                        updateRequestStep(requestItem?.id!!, step + 1)
+                    },
+                )
             }
         }
+    }
+
+    fun showConfirmationDialogCustom(
+        title: String,
+        message: String,
+        onYesAction: () -> Unit
+    ) {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle(title)
+        builder.setMessage(message)
+        builder.setPositiveButton("Yes") { dialog, _ ->
+            onYesAction()
+            dialog.dismiss()
+        }
+        builder.setNegativeButton("No") { dialog, _ ->
+            // Logic untuk handle aksi ketika "No" ditekan
+            setRequestData(viewModel.getItem().value)
+            dialog.dismiss()
+        }
+        builder.show()
     }
 }

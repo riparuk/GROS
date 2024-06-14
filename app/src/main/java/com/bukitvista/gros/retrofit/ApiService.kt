@@ -41,7 +41,7 @@ interface ApiService {
     @PUT("/requests/{request_id}/assignto/{staff_id}")
     fun assignRequest(
         @Path("request_id") requestId: Int,
-        @Path("staff_id") staffId: Int
+        @Path("staff_id") staffId: String
     ): Call<RequestsResponseItem>
 
     @Multipart
@@ -49,7 +49,7 @@ interface ApiService {
     fun uploadRequestImage(
         @Path("request_id") requestId: Int,
         @Part image: MultipartBody.Part
-    ): Call<List<ImageURLsItem?>?>
+    ): Call<RequestsResponseItem>
 
     @PUT("/requests/{request_id}/update-step/{step}")
     fun updateRequestStep(
