@@ -62,17 +62,20 @@
                     android:layout_marginBottom="2dp"
                     android:text="Held By"
                     android:textSize="12sp" />
-
-                <com.google.android.material.imageview.ShapeableImageView
-                    android:id="@+id/ivStaffProfile"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:layout_margin="2dp"
-                    android:scaleType="centerInside"
-                    android:adjustViewBounds="true"
-                    android:background="@color/gray100"
-                    app:shapeAppearanceOverlay="@style/ImageViewCircleStyle"
-                    android:src="@drawable/ic_user" />
+<!--                <ImageView-->
+<!--                    android:id="@+id/ivStaffProfile"-->
+<!--                    android:layout_width="match_parent"-->
+<!--                    android:layout_height="match_parent"-->
+<!--                    android:layout_marginTop="2dp"-->
+<!--                    app:srcCompat="@drawable/ic_empty_circle"/>-->
+                <TextView
+                    android:id="@+id/tvStaffName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="@font/roboto_bold"
+                    android:text="Staff Name"
+                    android:textSize="16sp" />
 
             </LinearLayout>
 

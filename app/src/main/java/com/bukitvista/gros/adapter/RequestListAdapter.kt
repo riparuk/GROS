@@ -13,6 +13,7 @@ import com.bukitvista.gros.databinding.ItemRequestBinding
 import com.bukitvista.gros.response.RequestsResponse
 import com.bukitvista.gros.response.RequestsResponseItem
 import com.bumptech.glide.Glide
+import com.bumptech.glide.request.RequestOptions
 
 class RequestListAdapter(private val listener: OnItemClickListener)
     :  ListAdapter<RequestsResponseItem, RequestListAdapter.ViewHolder>(DIFF_CALLBACK) {
@@ -31,10 +32,16 @@ class RequestListAdapter(private val listener: OnItemClickListener)
             binding.tvGuestName.text = item.guestName
             binding.tvDescription.text = item.description
 
+            if (item.staffName != null) {
+                binding.tvStaffName.text = item.staffName
+            } else {
+                binding.tvStaffName.text = "--"
+            }
             // Load staff profile image
-            Glide.with(itemView.context)
-                .load(item.staffImageURL)
-                .into(binding.ivStaffProfile)
+//            Glide.with(itemView.context)
+//                .load(item.staffImageURL?.url)
+//                .apply(RequestOptions.circleCropTransform())
+//                .into(binding.ivStaffProfile)
 
             // Count progress done
             val progressCount = listOf(

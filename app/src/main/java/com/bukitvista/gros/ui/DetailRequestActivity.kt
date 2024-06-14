@@ -1,19 +1,25 @@
 package com.bukitvista.gros.ui
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Log
 import android.view.ViewGroup
+import android.webkit.MimeTypeMap
 import android.widget.ImageView
 import android.widget.RadioButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.ViewModelProvider
@@ -25,6 +31,7 @@ import com.bukitvista.gros.retrofit.ApiConfig
 import com.bukitvista.gros.sharedpreferences.SharedPreferencesManager
 import com.bukitvista.gros.viewmodel.RequestItemViewModel
 import com.bumptech.glide.Glide
+import com.bumptech.glide.request.RequestOptions
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -41,6 +48,48 @@ class DetailRequestActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "DetailRequestActivity"
         private const val PICK_IMAGE_REQUEST = 1
+    }
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            // Izin diberikan, lanjutkan dengan logika Anda
+            pickImages()
+        } else {
+            // Izin ditolak, berikan penjelasan kepada pengguna atau ambil tindakan lain sesuai kebutuhan
+            Toast.makeText(this, "Permission denied to read media images", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private val pickImagesLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            val clipData = result.data?.clipData
+            clipData?.let { cd ->
+                for (i in 0 until cd.itemCount) {
+                    val imageUri: Uri? = cd.getItemAt(i).uri
+                    imageUri?.let { uri ->
+                        uploadImageToRequest(uri)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun checkAndRequestPermissions() {
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.READ_MEDIA_IMAGES
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            // Izin sudah diberikan, lanjutkan dengan logika Anda
+            pickImages()
+        } else {
+            // Meminta izin kepada pengguna
+            requestPermissionLauncher.launch(Manifest.permission.READ_MEDIA_IMAGES)
+        }
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -72,26 +121,30 @@ class DetailRequestActivity : AppCompatActivity() {
             assignRequest(requestItem?.id!!, staffId = staffId?.toInt()!!)
         }
         binding.btAddAttachments.setOnClickListener {
-            openGallery()
+            checkAndRequestPermissions()
         }
 
         viewModel.getItem().observe(this) { it ->
+            if(it?.assignTo != null) {
+                binding.btAssign.isEnabled = false
+                binding.btAssign.text = "Assigned"
+                binding.btAssign.setBackgroundColor(ContextCompat.getColor(this, R.color.gray400))
+            }
             setRequestData(it)
         }
 
     }
 
-    private fun openGallery() {
-        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-        startActivityForResult(intent, PICK_IMAGE_REQUEST)
+    private fun pickImages() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT)
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+        intent.type = "image/*"
+        pickImagesLauncher.launch(intent)
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK && data != null && data.data != null) {
-            val selectedImageUri = data.data!!
-            uploadImageToRequest(selectedImageUri)
-        }
+    private fun getMimeType(file: File): String {
+        val extension = MimeTypeMap.getFileExtensionFromUrl(file.path)
+        return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension) ?: "image/*"
     }
 
     private fun uploadImageToRequest(imageUri: Uri) {
@@ -104,24 +157,28 @@ class DetailRequestActivity : AppCompatActivity() {
 
         if (picturePath != null) {
             val file = File(picturePath)
-            val requestBody = file.asRequestBody("image/*".toMediaTypeOrNull())
-            val body = MultipartBody.Part.createFormData("profile_picture", file.name, requestBody)
+            val contentType = getMimeType(file)
+
+            val requestBody = file.asRequestBody(contentType.toMediaTypeOrNull())
+            val body = MultipartBody.Part.createFormData("files", file.name, requestBody)
 
             val apiService = ApiConfig.getApiService()
             viewModel.getItem().value?.id?.let { apiService.uploadRequestImage(it, body) }
-                ?.enqueue(object : Callback<RequestsResponseItem> {
+                ?.enqueue(object : Callback<List<ImageURLsItem?>?> {
                     override fun onResponse(
-                        call: Call<RequestsResponseItem>,
-                        response: Response<RequestsResponseItem>
+                        call: Call<List<ImageURLsItem?>?>,
+                        response: Response<List<ImageURLsItem?>?>
                     ) {
                         if (response.isSuccessful) {
-                            viewModel.setItem(response.body())
+                            viewModel.getItem().value?.imageURLs = response.body()
+                            viewModel.setItem(viewModel.getItem().value)
                             Toast.makeText(
                                 this@DetailRequestActivity,
                                 "Profile picture uploaded successfully",
                                 Toast.LENGTH_SHORT
                             ).show()
                         } else {
+                            Log.e(TAG, "Upload failed: ${response.message()}")
                             Toast.makeText(
                                 this@DetailRequestActivity,
                                 "Upload failed: ${response.message()}",
@@ -130,7 +187,7 @@ class DetailRequestActivity : AppCompatActivity() {
                         }
                     }
 
-                    override fun onFailure(call: Call<RequestsResponseItem>, t: Throwable) {
+                    override fun onFailure(call: Call<List<ImageURLsItem?>?>, t: Throwable) {
                         Toast.makeText(
                             this@DetailRequestActivity,
                             "Upload failed: ${t.message}",
@@ -157,7 +214,7 @@ class DetailRequestActivity : AppCompatActivity() {
                     }
                 } else {
                     viewModel.setItem(viewModel.getItem().value)
-                    Toast.makeText(this@DetailRequestActivity, "Gagal update step request: ${response.message()}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@DetailRequestActivity, "Invalid step or previous steps not completed: ${response.message()}", Toast.LENGTH_SHORT).show()
                 }
             }
 
@@ -200,6 +257,13 @@ class DetailRequestActivity : AppCompatActivity() {
         binding.tvTimestamp.text = requestItem?.createdAt
         binding.tvActions.text = requestItem?.actions
         binding.tvStaffName.text = requestItem?.staffName
+
+        // Load staff profile image
+//        Glide.with(this)
+//            .load(requestItem?.staffImageURL?.url)
+//            .apply(RequestOptions.circleCropTransform())
+//            .into(binding.ivStaffProfile)
+
         val imageFiles: List<ImageURLsItem?>? = requestItem?.imageURLs
 
         // Count progress done
@@ -215,6 +279,7 @@ class DetailRequestActivity : AppCompatActivity() {
 
         // Pastikan imageURLs tidak null dan tidak kosong sebelum mengisikan TextView
         if (!imageFiles.isNullOrEmpty()) {
+            binding.layoutAttachmentsURLs.removeAllViews()
             // Iterasi melalui setiap URL gambar dan membuat TextView baru untuk setiap URL
             imageFiles.forEach { image ->
                 val textView = TextView(this)
@@ -262,35 +327,5 @@ class DetailRequestActivity : AppCompatActivity() {
                 updateRequestStep(requestItem?.id!!, step+1)
             }
         }
-
-//        for ((index, radioButton) in radioButtons.withIndex()) {
-//            radioButton.setOnClickListener {
-//                when (index) {
-//                    0 -> {
-//                        if (requestItem?.receiveVerifyCompleted == true) {
-//                            requestItem.receiveVerifyCompleted = false
-//                        } else {
-//                            requestItem?.receiveVerifyCompleted = true
-//                        }
-//                    }
-//                    1 -> {
-//                        if (requestItem?.coordinateActionCompleted == true) {
-//                            requestItem.coordinateActionCompleted = false
-//                        } else {
-//                            requestItem?.coordinateActionCompleted = true
-//                        }
-//                    }
-//                    2 -> {
-//                        if (requestItem?.followUpResolveCompleted == true) {
-//                            requestItem.followUpResolveCompleted = false
-//                        } else {
-//                            requestItem?.followUpResolveCompleted = true
-//                        }
-//                    }
-//                }
-//                refreshRadioButton(requestItem)
-//            }
-//        }
-
     }
 }

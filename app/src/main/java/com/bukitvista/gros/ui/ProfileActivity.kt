@@ -1,15 +1,21 @@
 package com.bukitvista.gros.ui
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
 import android.view.View
+import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.ViewModelProvider
@@ -19,7 +25,6 @@ import com.bukitvista.gros.response.StaffResponse
 import com.bukitvista.gros.retrofit.ApiConfig
 import com.bukitvista.gros.sharedpreferences.SharedPreferencesManager
 import com.bukitvista.gros.viewmodel.ProfileViewModel
-import com.bukitvista.gros.viewmodel.RequestListViewModel
 import com.bumptech.glide.Glide
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -37,8 +42,46 @@ class ProfileActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "ProfileActivity"
-        private const val PICK_IMAGE_REQUEST = 1
     }
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            // Izin diberikan, lanjutkan dengan logika Anda
+            pickImage()
+        } else {
+            // Izin ditolak, berikan penjelasan kepada pengguna atau ambil tindakan lain sesuai kebutuhan
+            Toast.makeText(this, "Permission denied to read media images", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private val pickImageLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            val selectedImageUri: Uri? = result.data?.data
+            selectedImageUri?.let { uri ->
+                Glide.with(this).load(uri).into(binding.ivProfile)
+                uploadImageToServer(uri)
+            }
+        }
+    }
+
+    private fun checkAndRequestPermissions() {
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.READ_MEDIA_IMAGES
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            // Izin sudah diberikan, lanjutkan dengan logika Anda
+            pickImage()
+        } else {
+            // Meminta izin kepada pengguna
+            requestPermissionLauncher.launch(Manifest.permission.READ_MEDIA_IMAGES)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityProfileBinding.inflate(layoutInflater)
@@ -68,22 +111,13 @@ class ProfileActivity : AppCompatActivity() {
         }
 
         binding.ivProfile.setOnClickListener {
-            openGallery()
+            checkAndRequestPermissions()
         }
     }
 
-    private fun openGallery() {
+    private fun pickImage() {
         val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-        startActivityForResult(intent, PICK_IMAGE_REQUEST)
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK && data != null && data.data != null) {
-            val selectedImageUri = data.data!!
-            Glide.with(this).load(selectedImageUri).into(binding.ivProfile)
-            uploadImageToServer(selectedImageUri)
-        }
+        pickImageLauncher.launch(intent)
     }
 
     private fun uploadImageToServer(imageUri: Uri) {
@@ -96,8 +130,10 @@ class ProfileActivity : AppCompatActivity() {
 
         if (picturePath != null) {
             val file = File(picturePath)
-            val requestBody = file.asRequestBody("image/*".toMediaTypeOrNull())
-            val body = MultipartBody.Part.createFormData("profile_picture", file.name, requestBody)
+            val contentType = getMimeType(file)
+
+            val requestBody = file.asRequestBody(contentType.toMediaTypeOrNull())
+            val body = MultipartBody.Part.createFormData("file", file.name, requestBody)
 
             val apiService = ApiConfig.getApiService()
             val call = apiService.uploadProfilePicture(viewModel.getStaffData().value?.id.toString(), body)
@@ -111,10 +147,16 @@ class ProfileActivity : AppCompatActivity() {
                 }
 
                 override fun onFailure(call: Call<StaffResponse>, t: Throwable) {
+                    Log.e(TAG, "onFailure: ${t.message}")
                     Toast.makeText(this@ProfileActivity, "Upload failed: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
             })
         }
+    }
+
+    private fun getMimeType(file: File): String {
+        val extension = MimeTypeMap.getFileExtensionFromUrl(file.path)
+        return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension) ?: "image/*"
     }
 
     fun fetchStaffData(staffId: String?){
@@ -132,7 +174,6 @@ class ProfileActivity : AppCompatActivity() {
                     }
                 } else {
                     Log.e(TAG, "onFailure: ${response.body()}")
-//                    Toast.makeText(this@MainActivity, "${response.code()}-${response.message()}", Toast.LENGTH_SHORT).show()
                     Toast.makeText(this@ProfileActivity, "Staff ID not found", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -142,14 +183,11 @@ class ProfileActivity : AppCompatActivity() {
                 Log.e(TAG, "onFailure: ${t.message}")
 
                 val errorMessage = if (t is IOException) {
-                    // Jika kesalahan adalah IOException, artinya ada masalah dengan koneksi internet
                     "Problem with Connection"
                 } else {
-                    // Jika kesalahan bukan IOException, Anda dapat menampilkan pesan kesalahan yang diterima
                     t.message ?: "Something error"
                 }
                 Toast.makeText(this@ProfileActivity, errorMessage, Toast.LENGTH_SHORT).show()
-
             }
         })
     }
@@ -164,8 +202,8 @@ class ProfileActivity : AppCompatActivity() {
 
     private fun submitStaffData(responseBody: StaffResponse) {
         binding.tvName.text = responseBody.name
-        binding.tvStaffId.text = "STAFF ID : ${responseBody.id.toString()}"
-        binding.tvPropertyId.text = "PROPERTY ID : ${responseBody.propertyId.toString()}"
+        binding.tvStaffId.text = "STAFF ID : ${responseBody.id}"
+        binding.tvPropertyId.text = "PROPERTY ID : ${responseBody.propertyId}"
         binding.tvRequestHandled.text = responseBody.requestHandled.toString()
 
         if (responseBody.photo == null) {
@@ -175,6 +213,5 @@ class ProfileActivity : AppCompatActivity() {
                 .load(responseBody.photo.url)
                 .into(binding.ivProfile)
         }
-
     }
 }

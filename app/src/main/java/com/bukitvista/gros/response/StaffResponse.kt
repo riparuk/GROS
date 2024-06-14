@@ -10,7 +10,7 @@ data class StaffResponse(
 	@field:SerializedName("name")
 	val name: String? = null,
 
-	@field:SerializedName("photo")
+	@field:SerializedName("photo_path")
 	val photo: Photo? = null,
 
 	@field:SerializedName("id")

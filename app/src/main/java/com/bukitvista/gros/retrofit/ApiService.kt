@@ -1,5 +1,6 @@
 package com.bukitvista.gros.retrofit
 
+import com.bukitvista.gros.response.ImageURLsItem
 import com.bukitvista.gros.response.RequestImagesResponse
 import com.bukitvista.gros.response.RequestsResponse
 import com.bukitvista.gros.response.RequestsResponseItem
@@ -34,7 +35,7 @@ interface ApiService {
     @PUT("staffs/{id}/photo")
     fun uploadProfilePicture(
         @Path("id") id: String,
-        @Part photo: MultipartBody.Part
+        @Part file: MultipartBody.Part
     ): Call<StaffResponse>
 
     @PUT("/requests/{request_id}/assignto/{staff_id}")
@@ -48,7 +49,7 @@ interface ApiService {
     fun uploadRequestImage(
         @Path("request_id") requestId: Int,
         @Part image: MultipartBody.Part
-    ): Call<RequestsResponseItem>
+    ): Call<List<ImageURLsItem?>?>
 
     @PUT("/requests/{request_id}/update-step/{step}")
     fun updateRequestStep(

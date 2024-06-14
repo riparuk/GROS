@@ -55,7 +55,7 @@ data class RequestsResponseItem(
 	val coordinateActionCompleted: Boolean? = null,
 
 	@field:SerializedName("staffImageURL")
-	val staffImageURL: String? = null,
+	val staffImageURL: ImageURLsItem? = null,
 
 	@field:SerializedName("guest_id")
 	val guestId: Int? = null,
@@ -64,7 +64,7 @@ data class RequestsResponseItem(
 	val updatedAt: String? = null,
 
 	@field:SerializedName("imageURLs")
-	val imageURLs: List<ImageURLsItem?>? = null,
+	var imageURLs: List<ImageURLsItem?>? = null,
 
 	@field:SerializedName("staffName")
 	val staffName: String? = null,
