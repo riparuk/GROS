@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
+import android.view.View
 import android.view.ViewGroup
 import android.webkit.MimeTypeMap
 import android.widget.ImageView
@@ -39,6 +40,9 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.io.File
+import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class DetailRequestActivity : AppCompatActivity() {
 
@@ -170,8 +174,6 @@ class DetailRequestActivity : AppCompatActivity() {
                         response: Response<List<ImageURLsItem?>?>
                     ) {
                         if (response.isSuccessful) {
-                            viewModel.getItem().value?.imageURLs = response.body()
-                            viewModel.setItem(viewModel.getItem().value)
                             Toast.makeText(
                                 this@DetailRequestActivity,
                                 "Profile picture uploaded successfully",
@@ -196,6 +198,50 @@ class DetailRequestActivity : AppCompatActivity() {
                     }
                 })
         }
+    }
+
+    fun fetchRequests() {
+        showLoading(true)
+        val client = ApiConfig.getApiService().getRequests(requestId = viewModel.getItem().value?.id)
+        client.enqueue(object : Callback<List<RequestsResponseItem>> {
+            override fun onResponse(
+                call: Call<List<RequestsResponseItem>>, response: Response<List<RequestsResponseItem>>
+            ) {
+                showLoading(false)
+                if (response.isSuccessful) {
+                    val responseBody = response.body()
+                    if (responseBody != null && responseBody.isNotEmpty()) {
+                        viewModel.setItem(responseBody[0])
+                    }
+                } else {
+                    Log.e(TAG, "onFailure: $response")
+                    Toast.makeText(this@DetailRequestActivity, "Error:${response.code()}-${response.message()}", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onFailure(call: Call<List<RequestsResponseItem>>, t: Throwable) {
+                showLoading(false)
+                Log.e(TAG, "onFailure: ${t.message}")
+
+                val errorMessage = if (t is IOException) {
+                    // Jika kesalahan adalah IOException, artinya ada masalah dengan koneksi internet
+                    "Problem with Connection"
+                } else {
+                    // Jika kesalahan bukan IOException, Anda dapat menampilkan pesan kesalahan yang diterima
+                    t.message ?: "Something error"
+                }
+
+                Toast.makeText(this@DetailRequestActivity, errorMessage, Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+
+    private fun showLoading(isLoading: Boolean) {
+//        if (isLoading) {
+//            binding.progressBar.visibility = View.VISIBLE
+//        } else {
+//            binding.progressBar.visibility = View.GONE
+//        }
     }
 
     fun updateRequestStep(requestId: Int, step: Int) {
